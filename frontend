@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Staking Token Frontend</title>
+</head>
+<body>
+  <h1>Staking Token</h1>
+
+  <h2>Token Information</h2>
+  <p id="tokenBalance">Token Balance: </p>
+
+  <h2>Staking</h2>
+  <input type="number" id="stakeAmount" placeholder="Enter amount to stake" />
+  <button onclick="stake()">Stake</button>
+
+  <h2>Unstaking</h2>
+  <button onclick="unstake()">Unstake</button>
+
+  <h2>Claim Rewards</h2>
+  <button onclick="claimRewards()">Claim Rewards</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+  <script src="./contract.js"></script>
+  <script>
+    // Initialize web3
+    window.addEventListener('load', async () => {
+      if (window.ethereum) {
+        window.web3 = new Web3(window.ethereum);
+        await window.ethereum.enable();
+        initContract();
+        updateTokenBalance();
+      } else {
+        console.log('Metamask is not installed');
+      }
+    });
+
+    // Contract initialization
+    async function initContract() {
+      const contractAddress = 'CONTRACT_ADDRESS'; // Replace with the deployed contract address
+      const contractABI = CONTRACT_ABI; // Replace with the contract ABI
+
+      window.contract = new web3.eth.Contract(contractABI, contractAddress);
+    }
+
+    // Get user's token balance
+    async function getTokenBalance() {
+      const accounts = await web3.eth.getAccounts();
+      const userAddress = accounts[0];
+
+      const balance = await window.contract.methods.balanceOf(userAddress).call();
+      return balance;
+    }
+
+    // Update token balance on the frontend
+    async function updateTokenBalance() {
+      const balance = await getTokenBalance();
+      document.getElementById('tokenBalance').textContent = `Token Balance: ${balance}`;
+    }
+
+    // Stake tokens
+    async function stake() {
+      const stakeAmount = document.getElementById('stakeAmount').value;
+      const accounts = await web3.eth.getAccounts();
+      const userAddress = accounts[0];
+
+      await window.contract.methods.stake(stakeAmount).send({ from: userAddress });
+      updateTokenBalance();
+    }
+
+    // Unstake tokens
+    async function unstake() {
+      const accounts = await web3.eth.getAccounts();
+      const userAddress = accounts[0];
+
+      await window.contract.methods.unstake().send({ from: userAddress });
+      updateTokenBalance();
+    }
+
+    // Claim rewards
+    async function claimRewards() {
+      const accounts = await web3.eth.getAccounts();
+      const userAddress = accounts[0];
+
+      await window.contract.methods.claimReward().send({ from: userAddress });
+      updateTokenBalance();
+    }
+  </script>
+</body>
+</html>
