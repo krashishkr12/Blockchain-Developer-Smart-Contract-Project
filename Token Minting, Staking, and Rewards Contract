@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+contract StakingToken is ERC20 {
+    using SafeMath for uint256;
+
+    struct Staker {
+        uint256 stakedAmount;
+        uint256 startTime;
+    }
+
+    uint256 public constant REWARD_RATE = 100; // 100 rewards per second
+
+    mapping(address => Staker) public stakers;
+
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+
+    function stake(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(balanceOf(msg.sender) >= amount, "Insufficient balance");
+        require(stakers[msg.sender].stakedAmount == 0, "Already staked");
+
+        Staker storage staker = stakers[msg.sender];
+        staker.stakedAmount = amount;
+        staker.startTime = block.timestamp;
+
+        _burn(msg.sender, amount);
+    }
+
+    function unstake() external {
+        require(stakers[msg.sender].stakedAmount > 0, "No staked amount");
+
+        Staker storage staker = stakers[msg.sender];
+        uint256 stakedAmount = staker.stakedAmount;
+
+        uint256 reward = calculateReward(msg.sender);
+        _mint(msg.sender, reward);
+
+        staker.stakedAmount = 0;
+        staker.startTime = 0;
+
+        _mint(msg.sender, stakedAmount);
+    }
+
+    function calculateReward(address stakerAddress) public view returns (uint256) {
+        Staker storage staker = stakers[stakerAddress];
+
+        if (staker.stakedAmount == 0) {
+            return 0;
+        }
+
+        uint256 stakingDuration = block.timestamp.sub(staker.startTime);
+        uint256 reward = staker.stakedAmount.mul(stakingDuration).mul(REWARD_RATE);
+
+        return reward;
+    }
+
+    function claimReward() external {
+        require(stakers[msg.sender].stakedAmount > 0, "No staked amount");
+
+        Staker storage staker = stakers[msg.sender];
+        uint256 reward = calculateReward(msg.sender);
+
+        staker.startTime = block.timestamp;
+        _mint(msg.sender, reward);
+    }
+}
